@@ -2,9 +2,7 @@ package crisson.tapir
 package models
 
 import java.time.LocalDateTime
-import io.circe._
-
-case class Book(id: String, isbn: Int)
+import io.circe.{Encoder, Decoder}
 
 sealed trait Category {
   def id: Int
