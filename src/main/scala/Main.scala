@@ -1,4 +1,4 @@
-package crisson.tapir
+package me.crisson.petstore
 
 object Main extends App {
   println("Foobar")

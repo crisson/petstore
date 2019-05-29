@@ -6,16 +6,20 @@ scalaVersion := "2.12.8"
 
 organization := "me.crisson.petstore"
 
-mainClass in (Compile, run) := Some("crisson.tapir.Main")
+mainClass in (Compile, run) := Some("me.crisson.petstore.Main")
 
 val circeVersion  = "0.11.1"
 val tapirVersion  = "0.7.10"
 val catsVersion   = "2.0.0-M1"
 val http4sVersion = "0.20.1"
+val fs2Version    = "1.0.4"
 
 libraryDependencies := Seq(
   "org.typelevel" %% "cats-effect" % "1.3.0"
 ) ++ Seq(
+  "co.fs2" %% "fs2-core",
+  "co.fs2" %% "fs2-io"
+).map(_ % fs2Version) ++ Seq(
   "com.softwaremill.tapir" %% "tapir-core",
   "com.softwaremill.tapir" %% "tapir-json-circe",
   "com.softwaremill.tapir" %% "tapir-http4s-server"

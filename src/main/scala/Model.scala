@@ -1,25 +1,59 @@
-package crisson.tapir
+package me.crisson.petstore
 package models
 
 import java.time.LocalDateTime
-import io.circe.{Encoder, Decoder}
+import io.circe.{ Decoder, Encoder }
+import java.{ util => ju }
 
-sealed trait Category {
-  def id: Int
-  def name: String
-}
-case class BasicCategory(id: Int, name: String) extends Category
+case class Pet(
+    id: Pet.Id,
+    name: String,
+    category: Pet.Category,
+    photoUrls: List[ResourceInfo],
+    tags: Set[Pet.Tag],
+    status: Pet.Status
+) {}
 
-sealed trait PetStatus {}
+object Pet {
+  case class Id(value: String)           extends AnyVal
+  case class PhotoUrl(value: String)     extends AnyVal
+  case class Tag private (value: String) extends AnyVal
 
-object PetStatus {
-  case object Taken    extends PetStatus
-  case object Reserved extends PetStatus
-  case object InStore  extends PetStatus
+  object Id {
+    def newInstance: Pet.Id = Pet.Id(ju.UUID.randomUUID().toString())
+  }
+  object Tag {
+    def apply(value: String): Tag = Tag(value.toLowerCase())
+  }
+  sealed trait Category {
+    def id: String
+    def name: String
+  }
+  case class BasicCategory(id: String, name: String) extends Category
+  object Category {
+    private val categories                = Map(('dog -> BasicCategory("dog", "dog")));
+    def get(id: String): Option[Category] = categories.get(Symbol(id))
+  }
 
-  implicit val encodePetStatus: Encoder[PetStatus] = Encoder.encodeString.contramap[PetStatus](_.toString)
-  implicit val decodePetStatus: Decoder[PetStatus] = Decoder.decodeString.emap { str =>
-    str match {
+  sealed trait Status {}
+
+  object Status {
+    case object Taken    extends Status
+    case object Reserved extends Status
+    case object InStore  extends Status
+    case object Unknown  extends Status
+
+    implicit val encodePetStatus: Encoder[Status] = Encoder.encodeString.contramap[Status](_.toString)
+    implicit val decodePetStatus: Decoder[Status] = Decoder.decodeString.emap { str =>
+      str match {
+        case "Taken"    => Right(Taken)
+        case "Reserved" => Right(Reserved)
+        case "InStore"  => Right(InStore)
+        case _          => Left("Unknown Pet status")
+      }
+    }
+
+    def apply(in: String): Either[String, Status] = in match {
       case "Taken"    => Right(Taken)
       case "Reserved" => Right(Reserved)
       case "InStore"  => Right(InStore)
@@ -28,23 +62,16 @@ object PetStatus {
   }
 }
 
-case class PetId(value: Long)             extends AnyVal
-case class PhotoUrl(value: String)        extends AnyVal
-case class PetTag private (value: String) extends AnyVal
-object PetTag {
-  def apply(value: String): PetTag = PetTag(value.toLowerCase())
-}
-
-case class Pet(id: PetId, category: Category, photoUrls: List[PhotoUrl], tags: List[PetTag], status: PetStatus) {}
-
-case class StoreId(value: Int) extends AnyVal
-
 object Store {
-  type Inventory = Map[PetStatus, List[Pet]]
+  case class Id(value: String) extends AnyVal
+  type Inventory = Map[Pet.Status, List[Pet]]
 }
 
-case class OrderId(value: Int) extends AnyVal
-case class Order(id: OrderId, petId: PetId, quantity: Int, shipDate: LocalDateTime, complete: Boolean) {}
+case class Order(id: Order.Id, petId: Pet.Id, quantity: Int, shipDate: LocalDateTime, complete: Boolean) {}
+
+object Order {
+  case class Id(value: String) extends AnyVal
+}
 
 case class Email(value: String) extends AnyVal {
   def domain     = value.dropWhile(_ != '@')
@@ -54,19 +81,23 @@ case class Email(value: String) extends AnyVal {
 
 case class PhoneNumber(value: String) extends AnyVal
 
-sealed trait UserStatus
-object UserStatus {
-  case object RegisteredNotVerified extends UserStatus
-  case object Archived              extends UserStatus
-}
-
-case class UserId(value: Int) extends AnyVal
 case class User(
-    id: UserId,
+    id: User.Id,
     firstName: String,
     lastName: String,
     email: Email,
     password: String,
     phone: PhoneNumber,
-    status: UserStatus
+    status: User.Status
 )
+
+object User {
+  case class Id(value: String) extends AnyVal
+
+  sealed trait Status
+  object Status {
+    case object RegisteredNotVerified extends Status
+    case object Archived              extends Status
+  }
+
+}
