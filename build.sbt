@@ -22,14 +22,26 @@ lazy val `backend-cloudflare` = project
   .settings(
     name := "backend-cloudflare",
     settings,
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies ++ Seq(
+      dependencies.fs2,
+      dependencies.fs2Io,
+      dependencies.cats,
+      dependencies.catsEffect
+    )
   )
+  .dependsOn(api)
 
 lazy val api = project
   .settings(
     name := "api",
     settings,
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies ++ circeDependencies ++ Seq(
+      dependencies.tapir,
+      dependencies.tapirCirce,
+      dependencies.tapirHttp4s,
+      dependencies.cats,
+      dependencies.catsEffect
+    )
   )
   .disablePlugins(AssemblyPlugin)
 
@@ -39,6 +51,7 @@ lazy val swagger = project
     settings,
     libraryDependencies ++= commonDependencies
   )
+  .dependsOn(api)
 
 lazy val dependencies =
   new {
@@ -49,7 +62,6 @@ lazy val dependencies =
     val typesafeConfigV = "1.3.1"
     val pureconfigV     = "0.8.0"
     val monocleV        = "1.4.0"
-    val akkaV           = "2.5.6"
     val scalatestV      = "3.0.4"
     val scalacheckV     = "1.13.5"
     val circeVersion    = "0.11.1"
@@ -58,17 +70,17 @@ lazy val dependencies =
     val http4sVersion   = "0.20.1"
     val fs2Version      = "1.0.4"
 
+    val fs2   = "co.fs2" %% "fs2-core" % fs2Version
+    val fs2Io = "co.fs2" %% "fs2-io"   % fs2Version
+
+    val http4sServer = "org.http4s" %% "http4s-blaze-server" % http4sVersion
+    val http4sCirce  = "org.http4s" %% "http4s-circe"        % http4sVersion
+    val http4sDsl    = "org.http4s" %% "http4s-dsl"          % http4sVersion
+
+    val cats       = "org.typelevel" %% "cats-core"   % catsVersion
     val catsEffect = "org.typelevel" %% "cats-effect" % "1.3.0"
 
-    val fs2          = "co.fs2"        %% "fs2-core"            % fs2Version
-    val fs2Io        = "co.fs2"        %% "fs2-io"              % fs2Version
-
-    val http4sServer = "org.http4s"    %% "http4s-blaze-server" % http4sVersion
-    val http4sCirce  = "org.http4s"    %% "http4s-circe"        % http4sVersion
-    val http4sDsl    = "org.http4s"    %% "http4s-dsl"          % http4sVersion
-    val cats         = "org.typelevel" %% "cats-core"           % catsVersion
-
-    val circeCore    = "io.circe" %% "circe-core"    % circeVersion
+    val circe        = "io.circe" %% "circe-core"    % circeVersion
     val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
     val circeParser  = "io.circe" %% "circe-parser"  % circeVersion
 
@@ -81,7 +93,6 @@ lazy val dependencies =
     val scalaLogging   = "com.typesafe.scala-logging" %% "scala-logging"           % scalaLoggingV
     val slf4j          = "org.slf4j"                  % "jcl-over-slf4j"           % slf4jV
     val typesafeConfig = "com.typesafe"               % "config"                   % typesafeConfigV
-    val akka           = "com.typesafe.akka"          %% "akka-stream"             % akkaV
     val monocleCore    = "com.github.julien-truffaut" %% "monocle-core"            % monocleV
     val monocleMacro   = "com.github.julien-truffaut" %% "monocle-macro"           % monocleV
     val pureconfig     = "com.github.pureconfig"      %% "pureconfig"              % pureconfigV
@@ -89,19 +100,40 @@ lazy val dependencies =
     val scalacheck     = "org.scalacheck"             %% "scalacheck"              % scalacheckV
   }
 
+lazy val commonDependencies = Seq(
+  dependencies.logback,
+  dependencies.logstash,
+  dependencies.scalaLogging,
+  dependencies.slf4j,
+  dependencies.pureconfig,
+  dependencies.typesafeConfig,
+  dependencies.scalatest  % "test",
+  dependencies.scalacheck % "test"
+)
+
+lazy val circeDependencies = Seq(
+  dependencies.circe,
+  dependencies.circeGeneric,
+  dependencies.circeParser
+)
+
+lazy val tapirDependencies = Seq(
+  dependencies.tapir,
+  dependencies.tapirCirce,
+  dependencies.tapirHttp4s
+)
+
 lazy val settings =
 commonSettings ++
 wartremoverSettings ++
 scalafmtSettings
 
 lazy val scalafmtSettings = Seq(
-  scalafmtOnCompile := true,
-  scalafmtTestOnCompile := true,
-  scalafmtVersion := "1.2.0"
+  scalafmtOnCompile := true
 )
 
 lazy val wartremoverSettings = Seq(
-  wartremoverWarnings in (Compile, compile) ++= Warts.allBut(Wart.Throw)
+  // wartremoverWarnings in (Compile, compile) ++= Warts.allBut(Wart.Throw)
 )
 
 lazy val compilerOptions = Seq(

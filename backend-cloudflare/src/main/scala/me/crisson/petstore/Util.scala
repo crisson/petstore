@@ -1,7 +1,7 @@
 package me.crisson.petstore
 
 import cats.data.{ NonEmptyList, Validated }
-import cats.Id 
+import cats.Id
 import cats.syntax.monad._
 import cats.effect.Async
 
