@@ -8,19 +8,20 @@ organization := "me.crisson.petstore"
 
 mainClass in (Compile, run) := Some("me.crisson.petstore.Main")
 
-lazy val global = project
+lazy val root = project
   .in(file("."))
   .settings(settings)
   .disablePlugins(AssemblyPlugin)
   .aggregate(
     `backend-cloudflare`,
+    backend,
     api,
     swagger
   )
 
-lazy val `backend-cloudflare` = project
+lazy val backend = project
   .settings(
-    name := "backend-cloudflare",
+    name := "backend",
     settings,
     libraryDependencies ++= commonDependencies ++ Seq(
       dependencies.fs2,
@@ -30,6 +31,22 @@ lazy val `backend-cloudflare` = project
     )
   )
   .dependsOn(api)
+
+lazy val `backend-cloudflare` = project
+  .settings(
+    name := "backend-cloudflare",
+    settings,
+    libraryDependencies ++= commonDependencies ++ Seq(
+      dependencies.fs2,
+      dependencies.fs2Io,
+      dependencies.cats,
+      dependencies.catsEffect,
+      dependencies.http4sServer,
+      dependencies.http4sDsl,
+      dependencies.http4sCirce
+    )
+  )
+  .dependsOn(api, backend)
 
 lazy val api = project
   .settings(
