@@ -40,13 +40,6 @@ class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
         .leftMap[DomainFailure](DomainFailure.ValidationFailed(DomainFailure.Models.Pet, _))
       newPet <- repo.create(model)
       newPhotoMetas = newPet.photoUrls.map(_.meta)
-      newPhotos = model.photos
-        .collect {
-          case (data, meta) if newPhotoMetas.contains(meta) =>
-            (Stream.emits[F, Byte](data), newPet.photoUrls(newPhotoMetas.indexOf(meta)))
-
-        }
-      _ <- EitherT.pure[F, DomainFailure](newPhotos.map(s => storage.put(s._1, s._2)).toList.sequence)
     } yield newPet
   }
 
@@ -58,14 +51,6 @@ class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
         .transform(_.joinRight)
         .leftMap[DomainFailure](DomainFailure.ValidationFailed(DomainFailure.Models.Pet, _))
       newPet <- repo.update(id, model)
-      newPhotoMetas = newPet.photoUrls.map(_.meta)
-      newPhotos = model.photos
-        .collect {
-          case (data, meta) if newPhotoMetas.contains(meta) =>
-            (Stream.emits[F, Byte](data), newPet.photoUrls(newPhotoMetas.indexOf(meta)))
-
-        }
-      _ <- EitherT.pure[F, DomainFailure](newPhotos.map(s => storage.put(s._1, s._2)).toList.sequence)
     } yield newPet
   }
 
@@ -82,9 +67,32 @@ class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
 
   def delete(id: Pet.Id): OptionT[F, Unit] = repo.delete(id).toOption
 
+  def upload(
+      id: Pet.Id,
+      in: Inputs.UploadPetPhoto
+  ): EitherT[F, DomainFailure, List[ResourceInfo.Id]] =
+    for {
+      photos <- EitherT
+        .fromEither[F](ValidatedModels.Pet.Validator.photos(in.photos).toEither)
+        .leftMap[DomainFailure](DomainFailure.ValidationFailed(DomainFailure.Models.Pet, _))
+      (bytes, meta) = photos.unzip
+      pet <- get(id).toRight(DomainFailure.ModelNotFound("Pet", Option(id.toString())))
+      rInfoIds <- photos
+        .map { p =>
+          repo
+            .addPhoto(id, p._2)
+            .flatMap(
+              infoId => EitherT.right[DomainFailure](storage.put(Stream.emits[F, Byte](p._1), infoId)).map(_ => infoId)
+            )
+            .map(_.id)
+        }
+        .toList
+        .sequence
+    } yield rInfoIds
+
   def upload(id: Pet.Id, data: Stream[F, Byte], meta: ResourceMeta): EitherT[F, DomainFailure, ResourceInfo.Id] =
     for {
-      pet   <- get(id).toRight(DomainFailure.ModelNotFound("Pet", id.toString.some))
+      pet   <- get(id).toRight(DomainFailure.ModelNotFound("Pet", Option(id.toString())))
       rInfo <- repo.addPhoto(id, meta)
       _     <- EitherT.right[DomainFailure](storage.put(data, rInfo))
     } yield rInfo.id

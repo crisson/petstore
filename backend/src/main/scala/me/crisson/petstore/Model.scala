@@ -1,8 +1,12 @@
 package me.crisson.petstore
 package models
 
-import java.time.LocalDateTime
+// import io.circe.Json
+// import io.circe.syntax._
+// import io.circe.generic.auto._
 import io.circe.{ Decoder, Encoder }
+
+import java.time.LocalDateTime
 import java.{ util => ju }
 
 case class Pet(
@@ -15,14 +19,44 @@ case class Pet(
 ) {}
 
 object Pet {
-  case class Id(value: String)           extends AnyVal
-  case class PhotoUrl(value: String)     extends AnyVal
-  case class Tag private (value: String) extends AnyVal
+
+  // implicit val encoder: Encoder[Pet] = Encoder.instance(
+  //   p =>
+  //     Json.obj(
+  //       ("id", Json.fromString(p.id.value)),
+  //       ("name", Json.fromString(p.name)),
+  //       ("category", p.category.asJson),
+  //       ("tags", p.tags.asJson),
+  //       ("status", p.status.asJson)
+  //     )
+  // )
+
+  // implicit val decoder: Decoder[Pet] = Decoder.instance(
+  //   c =>
+  //     for {
+  //       rawId <- c.downField("id").as[String]
+  //       id = Pet.Id(rawId)
+  //       name     <- c.downField("name").as[String]
+  //       category <- c.downField("category").as[Category]
+  //       tags     <- c.downField("tags").as[Set[Tag]]
+  //       status   <- c.downField("status").as[Status]
+  //     } yield {
+  //       Pet(id, name, category, photoUrls = List.empty[ResourceInfo], tags, status)
+  //     }
+  // )
+
+  case class Id(value: String)  extends AnyVal
+  case class Tag(value: String) extends AnyVal
 
   object Id {
+    implicit val encodePetId: Encoder[Id] = Encoder.encodeString.contramap(_.value)
+
     def newInstance: Pet.Id = Pet.Id(ju.UUID.randomUUID().toString())
   }
+
   object Tag {
+    implicit val encodeTag: Encoder[Tag] = Encoder.encodeString.contramap(_.value)
+
     def apply(value: String): Tag = Tag(value.toLowerCase())
   }
   sealed trait Category {
@@ -36,13 +70,12 @@ object Pet {
   }
 
   sealed trait Status {}
+  case object Taken    extends Status
+  case object Reserved extends Status
+  case object InStore  extends Status
+  case object Unknown  extends Status
 
   object Status {
-    case object Taken    extends Status
-    case object Reserved extends Status
-    case object InStore  extends Status
-    case object Unknown  extends Status
-
     implicit val encodePetStatus: Encoder[Status] = Encoder.encodeString.contramap[Status](_.toString)
     implicit val decodePetStatus: Decoder[Status] = Decoder.decodeString.emap { str =>
       str match {

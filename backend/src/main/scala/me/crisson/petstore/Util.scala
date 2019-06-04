@@ -28,7 +28,7 @@ object ResourceInfo {
   case class Id(value: String) extends AnyVal
 
   object Id {
-    def apply(id: ju.UUID): Id = Id(id.toString)
+    def apply(id: ju.UUID): Id = Id(id.toString())
 
     def newInstance: Id = Id(ju.UUID.randomUUID().toString())
   }

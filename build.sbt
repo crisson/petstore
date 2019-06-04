@@ -23,14 +23,13 @@ lazy val backend = project
   .settings(
     name := "backend",
     settings,
-    libraryDependencies ++= commonDependencies ++ Seq(
+    libraryDependencies ++= commonDependencies ++ circeDependencies ++ Seq(
       dependencies.fs2,
       dependencies.fs2Io,
       dependencies.cats,
       dependencies.catsEffect
     )
   )
-  .dependsOn(api)
 
 lazy val `backend-cloudflare` = project
   .settings(
@@ -61,6 +60,7 @@ lazy val api = project
     )
   )
   .disablePlugins(AssemblyPlugin)
+  .dependsOn(backend)
 
 lazy val swagger = project
   .settings(

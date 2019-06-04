@@ -17,11 +17,11 @@ import cats.effect.implicits._
 
 import me.crisson.petstore.models.{ Pet => MPet, User => MUser, Email, PhoneNumber }
 import me.crisson.petstore.services.PetService
+import cats.effect.Resource
 
 object ValidatedModels {
   case class Pet(
       name: String,
-      photos: IndexedSeq[(Vector[Byte], ResourceMeta)] = Vector.empty[(Vector[Byte], ResourceMeta)],
       category: MPet.Category,
       tags: Set[MPet.Tag] = Set.empty[MPet.Tag]
   )
@@ -38,6 +38,8 @@ object ValidatedModels {
   )
 
   object Pet {
+    type ResourceInput = (Vector[Byte], ResourceMeta)
+
     object StatusUpdateValidator extends ModelValidator[Inputs.PetUpdate, ValidatedModels.PetUpdate] {
       def validate[F[_]: Async](raw: Inputs.PetUpdate): F[ValidatedNel[String, ValidatedModels.PetUpdate]] =
         Async[F].delay((Validator.petName(raw.name), status(raw.status)).mapN(PetUpdate.apply _))
@@ -56,9 +58,18 @@ object ValidatedModels {
       private val ContentTypes = Set(ContentType.`image/jpg`, ContentType.`image/png`, ContentType.`image/jpeg`)
 
       def validate[F[_]: Async](raw: Inputs.Pet): F[ValidatedNel[String, ValidatedModels.Pet]] = {
-        val Inputs.Pet(name, photos, rawCat, rawTags) = raw
+        val Inputs.Pet(name, rawCat, rawTags) = raw
+        Async[F].delay(
+          (
+            petName(name),
+            category(rawCat),
+            rawTags.map(tag).toList.traverse(identity).map(_.toSet)
+          ).mapN(ValidatedModels.Pet.apply _)
+        )
+      }
 
-        val (bytes, metas)               = photos.toVector.unzip
+      def photos(pics: List[ResourceInput]): ValidatedNel[String, Seq[ResourceInput]] = {
+        val (bytes, metas)               = pics.toVector.unzip
         val (validImages, invalidImages) = metas.map(resource).partition(_.isValid)
         val resources = validImages.sequence.map(
           m =>
@@ -68,14 +79,7 @@ object ValidatedModels {
             }
         )
 
-        Async[F].delay(
-          (
-            petName(name),
-            resources,
-            category(rawCat),
-            rawTags.map(tag).toList.traverse(identity).map(_.toSet)
-          ).mapN(ValidatedModels.Pet.apply _)
-        )
+        resources
       }
 
       def petName(name: String): ValidatedNel[String, String] =

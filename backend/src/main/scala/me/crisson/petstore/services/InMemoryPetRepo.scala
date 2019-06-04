@@ -26,16 +26,15 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
   // private val tags  = new ConcurrentHashMap[Pet.Id, Set[Pet.Tag]]
 
   def create(valid: ValidatedModels.Pet): EitherT[F, DomainFailure, Pet] = EitherT.pure[F, DomainFailure] {
-    val ValidatedModels.Pet(name, photos, category, tags) = valid
-    val id                                                = Pet.Id.newInstance
-    val (data, metas)                                     = photos.unzip
+    val ValidatedModels.Pet(name, category, tags) = valid
+    val id                                        = Pet.Id.newInstance
     val pet = Pet(
       id,
       name,
       category,
-      metas.map(ResourceInfo(ResourceInfo.Id.newInstance, _)).to[List],
+      List.empty[ResourceInfo],
       tags.toSet,
-      Pet.Status.Unknown
+      Pet.Unknown
     )
 
     store.put(id, pet)
@@ -43,14 +42,12 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
   }
 
   def update(id: Pet.Id, valid: ValidatedModels.Pet): EitherT[F, DomainFailure, Pet] = {
-    val ValidatedModels.Pet(name, photos, category, tags) = valid
-    val (data, metas)                                     = photos.unzip
-    val resourceInfos                                     = metas.map(ResourceInfo(ResourceInfo.Id.newInstance, _)).to[List]
+    val ValidatedModels.Pet(name, category, tags) = valid
     for {
       p <- EitherT
-        .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound("Pet", id.toString().some): DomainFailure)
+        .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound("Pet", Option(id.toString())): DomainFailure)
       newPet <- EitherT.pure[F, DomainFailure](
-        p.copy(name = p.name, photoUrls = p.photoUrls ++ resourceInfos, category = category, tags = tags)
+        p.copy(name = p.name, category = category, tags = tags)
       )
       _ <- EitherT.pure[F, DomainFailure](store.put(id, newPet))
     } yield newPet
@@ -64,7 +61,7 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
         store.put(id, newPet)
         newPet
       }
-      .toRight[DomainFailure](DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
+      .toRight[DomainFailure](DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString())))
 
   def addPhoto(id: Pet.Id, meta: ResourceMeta): EitherT[F, DomainFailure, ResourceInfo] = {
     val newPhotos = ResourceInfo(ResourceInfo.Id.newInstance, meta)
@@ -77,13 +74,15 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
     } yield newPhotoInfo
 
     out
-      .toRight[DomainFailure](DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
+      .toRight[DomainFailure](DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString())))
   }
 
   def delete(id: Pet.Id) = EitherT.fromOption[F](
     Option(store.remove(id)).map(_ => ()),
-    DomainFailure.ModelNotFound("Pet", id.toString.some)
+    DomainFailure.ModelNotFound("Pet", Option(id.toString()))
   )
 
-  def get(id: Pet.Id) = EitherT.pure[F, DomainFailure](store.get(id))
+  def get(id: Pet.Id) =
+    EitherT
+      .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
 }
