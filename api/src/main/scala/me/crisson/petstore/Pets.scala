@@ -35,8 +35,8 @@ object PetsApi extends PetsImplicits {
   val get: Endpoint[Pet.Id, API.APIErrorOutput, Pet, Nothing] =
     base.get.in(Params.idParameter).out(jsonBody[Pet])
 
-  val delete = base.delete.in(Params.idParameter).errorOut(jsonBody[DomainFailure]).out(jsonBody[Pet])
+  val delete = base.delete.in(Params.idParameter).out(jsonBody[Pet])
 
   val petListing: Endpoint[Unit, API.APIErrorOutput, List[Pet], Nothing] =
-    base.get.in("pets").out(jsonBody[List[Pet]])
+    base.get.out(jsonBody[List[Pet]])
 }

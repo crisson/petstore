@@ -48,6 +48,19 @@ object ValidatedModels {
         MPet.Status(in).toValidatedNel
 
     }
+    object UpdatePetValidator extends ModelValidator[Inputs.PPet, ValidatedModels.Pet] {
+      def validate[F[_]: Async](raw: Inputs.PPet): F[ValidatedNel[String, ValidatedModels.Pet]] = {
+        val Inputs.PPet(name, rawCat, rawTags) = raw
+        Async[F].delay(
+          (
+            Validator.petName(name),
+            Validator.category(rawCat),
+            rawTags.map(Validator.tag).toList.traverse(identity).map(_.toSet)
+          ).mapN(ValidatedModels.Pet.apply _)
+        )
+      }
+    }
+
     object Validator extends ModelValidator[Inputs.Pet, ValidatedModels.Pet] {
       private val MaxImageSize = 10000000
 

@@ -28,6 +28,7 @@ trait PetRepo[F[_]] {
   def addPhoto(id: Pet.Id, meta: ResourceMeta): EitherT[F, DomainFailure, ResourceInfo]
   def delete(id: Pet.Id): EitherT[F, DomainFailure, Unit]
   def get(id: Pet.Id): EitherT[F, DomainFailure, Pet]
+  def list: F[List[Pet]]
 }
 
 class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
@@ -43,8 +44,8 @@ class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
     } yield newPet
   }
 
-  def update(id: Pet.Id, in: Inputs.Pet): EitherT[F, DomainFailure, Pet] = {
-    val result = ValidatedModels.Pet.Validator.validate(in)
+  def update(id: Pet.Id, in: Inputs.PPet): EitherT[F, DomainFailure, Pet] = {
+    val result = ValidatedModels.Pet.UpdatePetValidator.validate(in)
     for {
       model <- EitherT
         .right[NonEmptyList[String]](result.map(_.toEither))
@@ -65,7 +66,13 @@ class PetService[F[_]: Async](storage: StorageService[F], repo: PetRepo[F]) {
 
   def get(id: Pet.Id): OptionT[F, Pet] = repo.get(id).toOption
 
-  def delete(id: Pet.Id): OptionT[F, Unit] = repo.delete(id).toOption
+  def delete(id: Pet.Id): EitherT[F, DomainFailure, Pet] =
+    for {
+      pet <- repo.get(id)
+      _   <- repo.delete(id)
+    } yield pet
+
+  def list: F[List[Pet]] = repo.list
 
   def upload(
       id: Pet.Id,

@@ -13,6 +13,7 @@ import cats.instances.list._
 import fs2.Stream
 
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
 
 import me.crisson.petstore.Inputs
 import me.crisson.petstore.models.Pet
@@ -85,4 +86,6 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
   def get(id: Pet.Id) =
     EitherT
       .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
+
+  def list = Async[F].delay(store.values().asScala.toList)
 }

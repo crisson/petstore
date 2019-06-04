@@ -17,9 +17,13 @@ object DomainFailure {
     a match {
       case mnf @ ModelNotFound(_, _) =>
         mnf.asJsonObject.add("message", Json.fromString(mnf.message)).asJson
-      case _ => JsonObject.singleton("message", Json.fromString("An unknown error has occurred")).asJson
+      case fail @ ValidationFailed(model, errors) =>
+        fail.asJsonObject.add("message", Json.fromString(fail.message)).asJson
+      case unk @ UnknownError(_) => JsonObject.singleton("message", Json.fromString(unk.message)).asJson
+      case _                     => JsonObject.singleton("message", Json.fromString("An unknown error has occurred")).asJson
     }
   }
+
   object Models {
     val Pet = "Pet"
   }
@@ -30,4 +34,6 @@ object DomainFailure {
   case class ValidationFailed(model: String, errors: NonEmptyList[String]) extends DomainFailure {
     def message = s"$model failed to validate with errors ${errors.toList.mkString(", ")}"
   }
+
+  case class UnknownError(message: String) extends DomainFailure
 }
