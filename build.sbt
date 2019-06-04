@@ -15,8 +15,7 @@ lazy val root = project
   .aggregate(
     `backend-cloudflare`,
     backend,
-    api,
-    swagger
+    api
   )
 
 lazy val backend = project
@@ -62,13 +61,6 @@ lazy val api = project
   .disablePlugins(AssemblyPlugin)
   .dependsOn(backend)
 
-lazy val swagger = project
-  .settings(
-    name := "swagger",
-    settings,
-    libraryDependencies ++= commonDependencies
-  )
-  .dependsOn(api)
 
 lazy val dependencies =
   new {
