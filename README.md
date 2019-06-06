@@ -19,4 +19,4 @@ This microservice is built with the following libraries
 I've only written one in-memory Repo and it uses a `TrieMap` for storage.
 
 ## Todo
-+ Create Order & User servies/controllers
++ Create Order & User services/controllers
