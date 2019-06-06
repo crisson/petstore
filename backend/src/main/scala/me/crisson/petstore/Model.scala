@@ -1,9 +1,6 @@
 package me.crisson.petstore
 package models
 
-// import io.circe.Json
-// import io.circe.syntax._
-// import io.circe.generic.auto._
 import io.circe.{ Decoder, Encoder }
 
 import java.time.LocalDateTime
@@ -19,31 +16,6 @@ case class Pet(
 ) {}
 
 object Pet {
-
-  // implicit val encoder: Encoder[Pet] = Encoder.instance(
-  //   p =>
-  //     Json.obj(
-  //       ("id", Json.fromString(p.id.value)),
-  //       ("name", Json.fromString(p.name)),
-  //       ("category", p.category.asJson),
-  //       ("tags", p.tags.asJson),
-  //       ("status", p.status.asJson)
-  //     )
-  // )
-
-  // implicit val decoder: Decoder[Pet] = Decoder.instance(
-  //   c =>
-  //     for {
-  //       rawId <- c.downField("id").as[String]
-  //       id = Pet.Id(rawId)
-  //       name     <- c.downField("name").as[String]
-  //       category <- c.downField("category").as[Category]
-  //       tags     <- c.downField("tags").as[Set[Tag]]
-  //       status   <- c.downField("status").as[Status]
-  //     } yield {
-  //       Pet(id, name, category, photoUrls = List.empty[ResourceInfo], tags, status)
-  //     }
-  // )
 
   case class Id(value: String)  extends AnyVal
   case class Tag(value: String) extends AnyVal
