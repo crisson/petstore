@@ -9,6 +9,7 @@ import me.crisson.petstore.{ ResourceInfo, ResourceMeta }
 import java.{ util => ju }
 import fs2.Pull
 import fs2.concurrent.Queue
+import scala.collection.concurrent.TrieMap
 
 trait StorageService[F[_]] {
   def put(resource: Stream[F, Byte], info: ResourceInfo): F[Unit];
@@ -18,15 +19,15 @@ trait StorageService[F[_]] {
 
 object StorageService {
   def apply[F[_]: Async]: StorageService[F] = new StorageService[F] {
-    private val fs = new ConcurrentHashMap[ResourceInfo.Id, List[Byte]]
+    private val fs = new TrieMap[ResourceInfo.Id, List[Byte]]
 
     def put(resource: Stream[F, Byte], info: ResourceInfo): F[Unit] =
       resource.compile.toList.map { bytes =>
-        val xs = Option(fs.get(info.id)).getOrElse(List()) ++ bytes
+        val xs = fs.get(info.id).getOrElse(List()) ++ bytes
         fs.put(info.id, xs)
       }.void
 
-    def get(id: ResourceInfo.Id) = OptionT.pure[F](Option(fs.get(id)).getOrElse(List.empty[Byte]))
+    def get(id: ResourceInfo.Id) = OptionT.pure[F](fs.get(id).getOrElse(List.empty[Byte]))
 
     def delete(id: ResourceInfo.Id): F[Unit] =
       Async[F].delay {

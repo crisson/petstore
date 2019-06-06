@@ -21,9 +21,10 @@ import me.crisson.petstore.DomainFailure
 import me.crisson.petstore.ResourceInfo
 import me.crisson.petstore.ValidatedModels
 import me.crisson.petstore.ResourceMeta
+import scala.collection.concurrent.TrieMap
 
 class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
-  private val store = new ConcurrentHashMap[Pet.Id, Pet]
+  private val store = new TrieMap[Pet.Id, Pet]
   // private val tags  = new ConcurrentHashMap[Pet.Id, Set[Pet.Tag]]
 
   def create(valid: ValidatedModels.Pet): EitherT[F, DomainFailure, Pet] = EitherT.pure[F, DomainFailure] {
@@ -46,7 +47,7 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
     val ValidatedModels.Pet(name, category, tags) = valid
     for {
       p <- EitherT
-        .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound("Pet", Option(id.toString())): DomainFailure)
+        .fromOption[F](store.get(id), DomainFailure.ModelNotFound("Pet", Option(id.toString())): DomainFailure)
       newPet <- EitherT.pure[F, DomainFailure](
         p.copy(name = p.name, category = category, tags = tags)
       )
@@ -56,7 +57,7 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
 
   def updateStatus(id: Pet.Id, valid: ValidatedModels.PetUpdate): EitherT[F, DomainFailure, Pet] =
     OptionT
-      .fromOption[F](Option(store.get(id)))
+      .fromOption[F](store.get(id))
       .map { pet =>
         val newPet = pet.copy(name = valid.name, status = valid.status)
         store.put(id, newPet)
@@ -68,7 +69,7 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
     val newPhotos = ResourceInfo(ResourceInfo.Id.newInstance, meta)
     val out = for {
       newPet <- OptionT
-        .fromOption[F](Option(store.get(id)))
+        .fromOption[F](store.get(id))
         .map(p => p.copy(photoUrls = p.photoUrls :+ newPhotos))
       _            = store.put(id, newPet)
       newPhotoInfo = newPhotos
@@ -85,7 +86,7 @@ class InMemoryPetRepo[F[_]: Async]() extends PetRepo[F] {
 
   def get(id: Pet.Id) =
     EitherT
-      .fromOption[F](Option(store.get(id)), DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
+      .fromOption[F](store.get(id), DomainFailure.ModelNotFound(DomainFailure.Models.Pet, Option(id.toString)))
 
-  def list = Async[F].delay(store.values().asScala.toList)
+  def list = Async[F].delay(store.values.toList)
 }

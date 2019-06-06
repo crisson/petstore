@@ -13,7 +13,7 @@ lazy val root = project
   .settings(settings)
   .disablePlugins(AssemblyPlugin)
   .aggregate(
-    `backend-cloudflare`,
+    server,
     backend,
     api
   )
@@ -29,10 +29,11 @@ lazy val backend = project
       dependencies.catsEffect
     )
   )
+  .disablePlugins(AssemblyPlugin)
 
-lazy val `backend-cloudflare` = project
+lazy val server = project
   .settings(
-    name := "backend-cloudflare",
+    name := "server",
     settings,
     libraryDependencies ++= commonDependencies ++ Seq(
       dependencies.fs2,
@@ -42,7 +43,9 @@ lazy val `backend-cloudflare` = project
       dependencies.http4sServer,
       dependencies.http4sDsl,
       dependencies.http4sCirce
-    )
+    ),
+    assemblyJarName in assembly := "server.jar",
+    mainClass in assembly := Some("me.crisson.petstore.Main")
   )
   .dependsOn(api, backend)
 
@@ -60,7 +63,6 @@ lazy val api = project
   )
   .disablePlugins(AssemblyPlugin)
   .dependsOn(backend)
-
 
 lazy val dependencies =
   new {
