@@ -10,9 +10,9 @@ This microservice is built with the following libraries
 + fs2
 
 ## Modules
-`backend` - domain model, repos, services
-`api` - tapir-based REST API definition
-`server` - http4s based server
+- `backend` - domain model, repos, services
+- `api` - tapir-based REST API definition
+- `server` - http4s based server
 
 ## Development
 
